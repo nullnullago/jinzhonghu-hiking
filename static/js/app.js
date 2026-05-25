@@ -10,7 +10,12 @@
   const $$ = (sel, parent) => Array.from((parent || document).querySelectorAll(sel));
 
   function showToast(msg, type = 'info') {
-    const container = $('#toastContainer');
+    let container = $('#toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      document.body.appendChild(container);
+    }
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     const icons = { success: '✅', error: '❌', info: 'ℹ️' };
