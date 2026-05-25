@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""中山联通2026年金钟湖健步行 - Flask 主应用"""
+"""金钟湖健步行 - Flask 主应用"""
 
 import os
 import io
