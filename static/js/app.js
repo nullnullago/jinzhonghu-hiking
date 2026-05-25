@@ -380,7 +380,8 @@
     async function generateQR(type) {
       const url = $('#qrcodeUrl').value.trim();
       const params = url ? `?url=${encodeURIComponent(url)}` : '';
-      const qrUrl = `/api/admin/qrcode/${type}${params}&password=zhongshan2026`;
+      const sep = params ? '&' : '?';
+      const qrUrl = `/api/admin/qrcode/${type}${params}${sep}password=zhongshan2026`;
       const preview = $('#qrcodePreview');
       preview.innerHTML = `<img src="${qrUrl}" alt="${type === 'start' ? '起点' : '终点'}打卡二维码" onerror="this.parentElement.innerHTML='<p style=color:red>二维码生成失败</p>'">`;
     }
