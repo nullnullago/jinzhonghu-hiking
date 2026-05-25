@@ -381,33 +381,82 @@ def api_admin_qrcode(qrcode_type):
 
     checkin_url = f'{base_url}/checkin/{qrcode_type}'
 
+    # 方式1: qrcode + Pillow 生成（质量最高）
     try:
         import qrcode as qr
-    except ImportError:
-        # fallback: 用纯 Python 生成简单二维码
-        return _generate_qrcode_fallback(checkin_url, qrcode_type)
-
-    img = qr.make_image(checkin_url, error_correction=qr.constants.ERROR_CORRECT_H, box_size=12, border=2)
-    buf = io.BytesIO()
-    img.save(buf, format='PNG')
-    buf.seek(0)
-    return send_file(buf, mimetype='image/png')
-
-
-def _generate_qrcode_fallback(data, qrcode_type):
-    """纯 Python 二维码生成（无需 qrcode 库）"""
-    # 使用 Google Charts API 作为后备方案
-    import urllib.request
-    import urllib.parse
-    url = f'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data={urllib.parse.quote(data)}'
-    try:
-        with urllib.request.urlopen(url) as resp:
-            img_data = resp.read()
-        buf = io.BytesIO(img_data)
+        img = qr.make_image(checkin_url, error_correction=qr.constants.ERROR_CORRECT_H, box_size=12, border=2)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
         buf.seek(0)
         return send_file(buf, mimetype='image/png')
     except Exception:
-        return jsonify({'success': False, 'message': '二维码生成失败'}), 500
+        pass
+
+    # 方式2: 纯 Python PNG 编码 + qrcode 矩阵（不依赖 Pillow 和外部 API）
+    try:
+        png_data = _generate_qrcode_pure_python(checkin_url)
+        buf = io.BytesIO(png_data)
+        buf.seek(0)
+        return send_file(buf, mimetype='image/png')
+    except Exception:
+        pass
+
+    return jsonify({'success': False, 'message': '二维码生成失败，请检查服务器依赖'}), 500
+
+
+def _generate_qrcode_pure_python(data, box_size=10, border=4):
+    """使用 qrcode 库矩阵 + 纯 Python PNG 编码生成二维码（无需 Pillow、无需外部 API）"""
+    import qrcode as qr
+    import struct
+    import zlib
+
+    qr_obj = qr.QRCode(
+        error_correction=qr.constants.ERROR_CORRECT_H,
+        box_size=1,
+        border=0,
+    )
+    qr_obj.add_data(data)
+    qr_obj.make(fit=True)
+
+    matrix = qr_obj.modules
+    module_count = len(matrix)
+    img_size = (module_count + 2 * border) * box_size
+
+    # 逐行构建原始像素数据（灰度，每像素 1 字节，filter=0）
+    raw_data = b''
+    white_row = b'\x00' + b'\xff' * img_size
+    black_block = b'\x00' * box_size
+    white_block = b'\xff' * box_size
+
+    # 上边框
+    for _ in range(border * box_size):
+        raw_data += white_row
+
+    # QR 矩阵
+    for row in matrix:
+        for _ in range(box_size):
+            line = b'\x00'  # filter byte
+            line += white_block * border  # 左边框
+            for cell in row:
+                line += black_block if cell else white_block
+            line += white_block * border  # 右边框
+            raw_data += line
+
+    # 下边框
+    for _ in range(border * box_size):
+        raw_data += white_row
+
+    # 构建 PNG 文件
+    def make_chunk(chunk_type, chunk_data):
+        chunk = chunk_type + chunk_data
+        return struct.pack('>I', len(chunk_data)) + chunk + struct.pack('>I', zlib.crc32(chunk) & 0xffffffff)
+
+    png = b'\x89PNG\r\n\x1a\n'
+    png += make_chunk(b'IHDR', struct.pack('>IIBBBBB', img_size, img_size, 8, 0, 0, 0, 0))
+    png += make_chunk(b'IDAT', zlib.compress(raw_data))
+    png += make_chunk(b'IEND', b'')
+
+    return png
 
 
 # =================== 启动 ===================
