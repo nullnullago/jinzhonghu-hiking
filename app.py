@@ -353,6 +353,7 @@ def api_admin_teams_add():
         return jsonify({'success': False, 'message': '队伍名称不能为空'}), 400
 
     team_id = add_team(name, emoji, color)
+    cfg.config['teams'] = get_all_teams()
     return jsonify({'success': True, 'team_id': team_id, 'message': f'队伍「{name}」创建成功'})
 
 
@@ -369,6 +370,7 @@ def api_admin_teams_update(team_id):
         return jsonify({'success': False, 'message': '队伍名称不能为空'}), 400
 
     update_team(team_id, name, emoji, color)
+    cfg.config['teams'] = get_all_teams()
     return jsonify({'success': True, 'message': '队伍信息已更新'})
 
 
@@ -378,6 +380,7 @@ def api_admin_teams_delete(team_id):
     """删除队伍"""
     ok, msg = delete_team(team_id)
     if ok:
+        cfg.config['teams'] = get_all_teams()
         return jsonify({'success': True, 'message': msg})
     else:
         return jsonify({'success': False, 'message': msg}), 400
