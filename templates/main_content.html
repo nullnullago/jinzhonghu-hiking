@@ -1,0 +1,184 @@
+<!-- ========== 主应用导航栏 ========== -->
+<nav class="main-nav" id="mainNav">
+    <div class="nav-inner">
+        <a href="/" class="nav-logo">
+            <span class="logo-mark"></span>
+            <span class="logo-text">{{ activity.name }}</span>
+        </a>
+        <div class="nav-links">
+            <a href="/" class="nav-link {% if page == 'home' %}active{% endif %}">
+                <i class="fas fa-home"></i> 首页
+            </a>
+            <a href="/register" class="nav-link {% if page == 'register' %}active{% endif %}">
+                <i class="fas fa-user-plus"></i> 报名
+            </a>
+            <a href="/checkin/start" class="nav-link {% if page == 'checkin' and checkin_type == 'start' %}active{% endif %}">
+                <i class="fas fa-flag"></i> 起点
+            </a>
+            <a href="/checkin/end" class="nav-link {% if page == 'checkin' and checkin_type == 'end' %}active{% endif %}">
+                <i class="fas fa-flag-checkered"></i> 终点
+            </a>
+            <a href="/query" class="nav-link {% if page == 'query' %}active{% endif %}">
+                <i class="fas fa-search"></i> 查询
+            </a>
+            <a href="/rankings" class="nav-link {% if page == 'rankings' %}active{% endif %}">
+                <i class="fas fa-trophy"></i> 排行
+            </a>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+</nav>
+
+<!-- ========== 首页 ========== -->
+{% if page == 'home' %}
+<section class="hero-section">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+        <div class="hero-badge">中山联通</div>
+        <h1 class="hero-title">{{ activity.name }}</h1>
+        <p class="hero-subtitle">{{ activity.description }}</p>
+        <div class="hero-info-cards">
+            <div class="info-card">
+                <span class="info-icon">📅</span>
+                <span class="info-value">{{ activity.date }}</span>
+                <span class="info-label">活动日期</span>
+            </div>
+            <div class="info-card">
+                <span class="info-icon">👥</span>
+                <span class="info-value">{{ teams | length }}</span>
+                <span class="info-label">参赛队伍</span>
+            </div>
+            <div class="info-card">
+                <span class="info-icon">📍</span>
+                <span class="info-value">{{ activity.location }}</span>
+                <span class="info-label">活动地点</span>
+            </div>
+            <div class="info-card">
+                <span class="info-icon">🏁</span>
+                <span class="info-value">5 KM</span>
+                <span class="info-label">健行里程</span>
+            </div>
+        </div>
+        <div class="hero-actions">
+            <a href="/register" class="btn btn-primary btn-lg">
+                <i class="fas fa-running"></i> 立即报名
+            </a>
+            <a href="/rankings" class="btn btn-outline btn-lg">
+                <i class="fas fa-trophy"></i> 查看排行
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ========== 队伍展示区 ========== -->
+<section class="teams-preview">
+    <h2 class="section-title">参赛队伍</h2>
+    <p class="section-subtitle">选择你的战队，一起出发</p>
+    <div class="teams-grid" id="teamsGrid">
+        {% for t in teams %}
+        <div class="team-card" style="--team-color: {{ t.color }}">
+            <div class="team-emoji">{{ t.emoji }}</div>
+            <div class="team-name">{{ t.name }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- ========== 报名页面 ========== -->
+{% if page == 'register' %}
+<section class="page-section">
+    <div class="page-header">
+        <h1><i class="fas fa-user-plus"></i> 在线报名</h1>
+        <p>填写信息，选择队伍，加入这场健步行盛会</p>
+    </div>
+    <div class="form-card">
+        <form id="registerForm">
+            <div class="form-group">
+                <label>姓名</label>
+                <input type="text" id="regName" placeholder="请输入您的姓名" required maxlength="20">
+            </div>
+            <div class="form-group">
+                <label>手机号</label>
+                <input type="tel" id="regPhone" placeholder="请输入11位手机号" required maxlength="11" pattern="[0-9]{11}">
+            </div>
+            <div class="form-group">
+                <label>选择队伍</label>
+                <div class="team-selector" id="teamSelector">
+                    {% for t in teams %}
+                    <label class="team-option" style="--team-color: {{ t.color }}">
+                        <input type="radio" name="team" value="{{ t.id }}" {% if loop.first %}checked{% endif %}>
+                        <span class="team-option-emoji">{{ t.emoji }}</span>
+                        <span class="team-option-name">{{ t.name }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="registerBtn">
+                <i class="fas fa-check"></i> 确认报名
+            </button>
+        </form>
+        <div class="register-result" id="registerResult" style="display:none;"></div>
+    </div>
+</section>
+{% endif %}
+
+<!-- ========== 打卡页面 ========== -->
+{% if page == 'checkin' %}
+<section class="page-section">
+    <div class="page-header">
+        <h1>{% if checkin_type == 'start' %}<i class="fas fa-flag"></i> 起点打卡{% else %}<i class="fas fa-flag-checkered"></i> 终点打卡{% endif %}</h1>
+        <p>请输入您的参赛编号完成打卡</p>
+    </div>
+    <div class="checkin-card">
+        <div class="checkin-type-badge {% if checkin_type == 'start' %}badge-start{% else %}badge-end{% endif %}">
+            {% if checkin_type == 'start' %}起点{% else %}终点{% endif %}
+        </div>
+        <div class="checkin-clock" id="checkinClock">--:--:--</div>
+        <div class="form-group">
+            <input type="text" id="checkinBib" placeholder="请输入参赛编号（如 ZSLT0523001）" class="input-lg text-center" maxlength="12">
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" id="checkinBtn" data-type="{{ checkin_type }}">
+            {% if checkin_type == 'start' %}<i class="fas fa-play"></i> 起点打卡{% else %}<i class="fas fa-stop"></i> 终点打卡{% endif %}
+        </button>
+        <div class="checkin-result" id="checkinResult" style="display:none;"></div>
+    </div>
+</section>
+{% endif %}
+
+<!-- ========== 成绩查询 ========== -->
+{% if page == 'query' %}
+<section class="page-section">
+    <div class="page-header">
+        <h1><i class="fas fa-search"></i> 成绩查询</h1>
+        <p>输入参赛编号查看您的成绩</p>
+    </div>
+    <div class="form-card">
+        <div class="form-group">
+            <input type="text" id="queryBib" placeholder="请输入参赛编号" class="input-lg text-center" maxlength="12">
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" id="queryBtn">
+            <i class="fas fa-search"></i> 查询
+        </button>
+        <div class="query-result" id="queryResult" style="display:none;"></div>
+    </div>
+</section>
+{% endif %}
+
+<!-- ========== 队伍排行 ========== -->
+{% if page == 'rankings' %}
+<section class="page-section">
+    <div class="page-header">
+        <h1><i class="fas fa-trophy"></i> 队伍排行榜</h1>
+        <p>各队伍平均用时排名（仅统计已完成全程的队员）</p>
+    </div>
+    <div class="rankings-list" id="rankingsList">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> 加载中...</div>
+    </div>
+</section>
+{% endif %}
+
+<!-- ========== Toast / Modal 容器 ========== -->
+<div class="toast-container" id="toastContainer"></div>

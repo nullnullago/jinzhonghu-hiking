@@ -1,0 +1,278 @@
+<!-- ========== 管理后台登录 ========== -->
+{% if page == 'login' %}
+<div class="admin-login-container">
+    <div class="admin-login-card">
+        <div class="admin-login-header">
+            <span class="admin-icon"><i class="fas fa-shield-alt"></i></span>
+            <h2>管理后台</h2>
+            <p>{{ activity.name }} · 数据管理</p>
+        </div>
+        <form id="adminLoginForm">
+            <div class="form-group">
+                <label>管理密码</label>
+                <input type="password" id="adminPassword" placeholder="请输入管理密码" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">登录</button>
+        </form>
+        <div id="adminLoginError" class="error-msg" style="display:none;"></div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ========== 管理后台面板 ========== -->
+{% if page == 'dashboard' %}
+<div class="admin-dashboard">
+    <header class="admin-header">
+        <div class="admin-header-left">
+            <h1><i class="fas fa-shield-alt"></i> 管理后台</h1>
+            <span>{{ activity.name }} · 数据管理</span>
+        </div>
+        <div class="admin-header-right">
+            <a href="/" class="btn btn-sm btn-outline" target="_blank">预览前台</a>
+            <button id="adminLogoutBtn" class="btn btn-sm btn-danger">退出</button>
+        </div>
+    </header>
+
+    <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="stats">数据统计</button>
+        <button class="admin-tab" data-tab="users">用户管理</button>
+        <button class="admin-tab" data-tab="teams">队伍管理</button>
+        <button class="admin-tab" data-tab="qrcode">二维码</button>
+        <button class="admin-tab" data-tab="export">数据导出</button>
+    </div>
+
+    <!-- 数据统计 -->
+    <div class="admin-tab-content active" id="tab-stats">
+        <div class="stats-cards" id="statsCards">
+            <div class="stat-card stat-total">
+                <div class="stat-value" id="statTotal">-</div>
+                <div class="stat-label">报名人数</div>
+            </div>
+            <div class="stat-card stat-started">
+                <div class="stat-value" id="statStarted">-</div>
+                <div class="stat-label">已出发</div>
+            </div>
+            <div class="stat-card stat-finished">
+                <div class="stat-value" id="statFinished">-</div>
+                <div class="stat-label">已完成</div>
+            </div>
+            <div class="stat-card stat-rate">
+                <div class="stat-value" id="statRate">-</div>
+                <div class="stat-label">完成率</div>
+            </div>
+        </div>
+        <div class="team-stats-section">
+            <h3>各队报名情况</h3>
+            <div class="team-stats-table-wrapper">
+                <table class="team-stats-table">
+                    <thead>
+                        <tr><th>队伍</th><th>报名人数</th><th>已出发</th><th>已完成</th><th>平均用时</th></tr>
+                    </thead>
+                    <tbody id="teamStatsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户管理 -->
+    <div class="admin-tab-content" id="tab-users">
+        <div class="tab-toolbar">
+            <input type="text" id="userSearchInput" placeholder="搜索姓名或编号..." class="input-search">
+            <div class="toolbar-buttons">
+                <button class="btn btn-sm btn-outline" id="importBtn">
+                    <i class="fas fa-file-import"></i> 批量导入
+                </button>
+            </div>
+        </div>
+        
+        <!-- 批量导入模态框 -->
+        <div class="modal" id="importModal" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-file-import"></i> 批量导入用户</h3>
+                    <button class="modal-close" id="importModalClose">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="import-options">
+                        <div class="import-option active" data-type="csv">
+                            <div class="import-option-icon">
+                                <i class="fas fa-file-csv"></i>
+                            </div>
+                            <h4>CSV 文件导入</h4>
+                            <p>支持 Excel 导出的 CSV 文件</p>
+                        </div>
+                        <div class="import-option" data-type="json">
+                            <div class="import-option-icon">
+                                <i class="fas fa-file-code"></i>
+                            </div>
+                            <h4>JSON 文件导入</h4>
+                            <p>支持 JSON 格式数据</p>
+                        </div>
+                    </div>
+                    
+                    <div class="import-form" id="importFormCSV">
+                        <h4>CSV 文件格式</h4>
+                        <p>CSV 文件应包含以下列（列名不区分中英文）：</p>
+                        <ul>
+                            <li><code>姓名</code> 或 <code>name</code> - 用户姓名</li>
+                            <li><code>手机号</code> 或 <code>phone</code> - 手机号码</li>
+                            <li><code>队伍ID</code> 或 <code>team_id</code> - 队伍编号（1-{{ teams|length }}）</li>
+                        </ul>
+                        <p>示例：</p>
+                        <pre>姓名,手机号,队伍ID
+张三,13800138000,1
+李四,13900139000,2</pre>
+                        
+                        <div class="form-group">
+                            <label>选择 CSV 文件</label>
+                            <input type="file" id="csvFile" accept=".csv" class="input-file">
+                        </div>
+                    </div>
+                    
+                    <div class="import-form" id="importFormJSON" style="display:none;">
+                        <h4>JSON 格式</h4>
+                        <p>JSON 文件应为用户数组，每个用户对象包含以下字段：</p>
+                        <pre>[
+  {
+    "name": "张三",
+    "phone": "13800138000",
+    "team_id": 1
+  },
+  {
+    "name": "李四",
+    "phone": "13900139000",
+    "team_id": 2
+  }
+]</pre>
+                        <div class="form-group">
+                            <label>选择 JSON 文件</label>
+                            <input type="file" id="jsonFile" accept=".json" class="input-file">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>队伍对照表</label>
+                        <div class="teams-reference">
+                            {% for team in teams %}
+                            <div class="team-ref-item">
+                                <span class="team-emoji">{{ team.emoji }}</span>
+                                <span class="team-name">{{ team.name }}</span>
+                                <code class="team-id">ID: {{ team.id }}</code>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" id="importCancelBtn">取消</button>
+                    <button class="btn btn-primary" id="importSubmitBtn" disabled>开始导入</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr><th>参赛编号</th><th>姓名</th><th>手机号</th><th>队伍</th><th>起点打卡</th><th>终点打卡</th><th>用时</th></tr>
+                </thead>
+                <tbody id="usersTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 二维码生成 -->
+    <div class="admin-tab-content" id="tab-qrcode">
+        <div class="qrcode-section">
+            <div class="form-group">
+                <label>网站URL（留空使用当前域名）</label>
+                <input type="text" id="qrcodeUrl" placeholder="例如: https://your-domain.com" class="input-lg">
+            </div>
+            <div class="qrcode-buttons">
+                <button class="btn btn-primary" id="genStartQR"><i class="fas fa-flag"></i> 生成起点打卡二维码</button>
+                <button class="btn btn-primary" id="genEndQR"><i class="fas fa-flag-checkered"></i> 生成终点打卡二维码</button>
+            </div>
+            <div class="qrcode-preview" id="qrcodePreview">
+                <p class="text-muted">点击上方按钮生成二维码</p>
+            </div>
+            <div class="qrcode-info">
+                <p><strong>使用说明：</strong></p>
+                <ul>
+                    <li>生成二维码后可右键保存图片</li>
+                    <li>将起点二维码打印张贴在起点处</li>
+                    <li>将终点二维码打印张贴在终点处</li>
+                    <li>参与者使用微信扫一扫即可打开打卡页面</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 队伍管理 -->
+    <div class="admin-tab-content" id="tab-teams">
+        <div class="tab-toolbar">
+            <button class="btn btn-sm btn-primary" id="addTeamBtn">
+                <i class="fas fa-plus"></i> 新增队伍
+            </button>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr><th>ID</th><th>队伍</th><th>成员数</th><th>颜色</th><th>操作</th></tr>
+                </thead>
+                <tbody id="teamsTableBody">
+                    <tr><td colspan="5" class="text-center text-muted">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 队伍编辑模态框 -->
+        <div class="modal" id="teamModal" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-users"></i> <span id="teamModalTitle">新增队伍</span></h3>
+                    <button class="modal-close" id="teamModalClose">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="teamForm">
+                        <input type="hidden" id="teamId">
+                        <div class="form-group">
+                            <label>队伍名称 *</label>
+                            <input type="text" id="teamName" placeholder="例如：市场部" required>
+                        </div>
+                        <div class="form-group">
+                            <label>队伍图标（emoji）</label>
+                            <input type="text" id="teamEmoji" placeholder="例如：🏃‍♂️" maxlength="5">
+                            <p class="form-hint">可选，建议使用1-2个emoji</p>
+                        </div>
+                        <div class="form-group">
+                            <label>队伍颜色</label>
+                            <div class="color-picker">
+                                <input type="color" id="teamColor" value="#D5001C">
+                                <span id="teamColorValue">#D5001C</span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" id="teamCancelBtn">取消</button>
+                    <button class="btn btn-primary" id="teamSubmitBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据导出 -->
+    <div class="admin-tab-content" id="tab-export">
+        <div class="export-section">
+            <h3>导出参与者数据</h3>
+            <p>将所有参与者的报名和打卡数据导出为 CSV 文件，可用 Excel 打开。</p>
+            <button class="btn btn-primary btn-lg" id="exportBtn">
+                <i class="fas fa-file-csv"></i> 导出 CSV
+            </button>
+            <div class="export-info">
+                <h4>导出字段：</h4>
+                <code>参赛编号, 姓名, 手机号, 队伍, 起点打卡时间, 终点打卡时间, 用时(秒)</code>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
