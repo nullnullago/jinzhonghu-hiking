@@ -17,7 +17,8 @@ from database import (
     register_user, get_user_by_bib, get_user_by_id,
     checkin_start, checkin_end, get_rankings, get_stats,
     get_all_users, export_csv, batch_import_users,
-    add_team, update_team, delete_team
+    add_team, update_team, delete_team,
+    get_activity_config, update_activity_config
 )
 
 app = Flask(__name__)
@@ -40,8 +41,18 @@ with app.app_context():
 # ---------- Jinja2 全局变量 ----------
 @app.context_processor
 def inject_config():
+    # 合并配置文件中的活动信息和数据库中的活动配置（数据库优先）
+    db_config = get_activity_config()
+    activity_config = {
+        'name': db_config.get('name', cfg.config['activity']['name']),
+        'date': db_config.get('date', cfg.config['activity']['date']),
+        'distance': db_config.get('distance', cfg.config['activity']['distance']),
+        'location': db_config.get('location', '金钟湖公园'),
+        'description': db_config.get('description', cfg.config['activity']['subtitle']),
+        'participants': cfg.config['activity']['participants'],
+    }
     return {
-        'activity': cfg.config['activity'],
+        'activity': activity_config,
         'teams': cfg.config['teams'],
         'team_map': {t['id']: t for t in cfg.config['teams']},
     }
@@ -130,9 +141,18 @@ def admin():
 @app.route('/api/config')
 def api_config():
     """获取活动配置和队伍列表"""
+    db_config = get_activity_config()
+    activity_config = {
+        'name': db_config.get('name', cfg.config['activity']['name']),
+        'date': db_config.get('date', cfg.config['activity']['date']),
+        'distance': db_config.get('distance', cfg.config['activity']['distance']),
+        'location': db_config.get('location', '金钟湖公园'),
+        'description': db_config.get('description', cfg.config['activity']['subtitle']),
+        'participants': cfg.config['activity']['participants'],
+    }
     return jsonify({
         'success': True,
-        'activity': cfg.config['activity'],
+        'activity': activity_config,
         'teams': cfg.config['teams'],
     })
 
@@ -187,25 +207,29 @@ def api_user(identifier):
 
 @app.route('/api/checkin/start', methods=['POST'])
 def api_checkin_start():
-    """起点打卡"""
+    """起点打卡（支持GPS定位）"""
     data = request.get_json() or {}
     bib_number = (data.get('bib_number') or '').strip().upper()
     if not bib_number:
         return jsonify({'success': False, 'message': '请输入参赛编号'}), 400
 
-    ok, msg, user = checkin_start(bib_number)
+    lat = data.get('lat')
+    lng = data.get('lng')
+    ok, msg, user = checkin_start(bib_number, lat, lng)
     return jsonify({'success': ok, 'message': msg, 'user': user})
 
 
 @app.route('/api/checkin/end', methods=['POST'])
 def api_checkin_end():
-    """终点打卡"""
+    """终点打卡（支持GPS定位）"""
     data = request.get_json() or {}
     bib_number = (data.get('bib_number') or '').strip().upper()
     if not bib_number:
         return jsonify({'success': False, 'message': '请输入参赛编号'}), 400
 
-    ok, msg, user = checkin_end(bib_number)
+    lat = data.get('lat')
+    lng = data.get('lng')
+    ok, msg, user = checkin_end(bib_number, lat, lng)
     return jsonify({'success': ok, 'message': msg, 'user': user})
 
 
@@ -366,6 +390,22 @@ def api_admin_export():
         as_attachment=True,
         download_name=f'健步行数据_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
     )
+
+
+@app.route('/api/admin/settings', methods=['GET', 'POST'])
+@admin_required
+def api_admin_settings():
+    """活动设置管理"""
+    if request.method == 'GET':
+        config = get_activity_config()
+        return jsonify({'success': True, 'config': config})
+    
+    # POST: 更新设置
+    data = request.get_json() or {}
+    for key, value in data.items():
+        if value is not None:
+            update_activity_config(key, str(value))
+    return jsonify({'success': True, 'message': '设置已保存'})
 
 
 @app.route('/api/admin/qrcode/<qrcode_type>')

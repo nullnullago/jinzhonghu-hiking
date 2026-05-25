@@ -31,6 +31,10 @@ def init_db():
             start_time TEXT,
             end_time TEXT,
             duration INTEGER,
+            start_lat REAL,
+            start_lng REAL,
+            end_lat REAL,
+            end_lng REAL,
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
         );
 
@@ -40,7 +44,42 @@ def init_db():
             emoji TEXT DEFAULT '',
             color TEXT DEFAULT '#333'
         );
+
+        CREATE TABLE IF NOT EXISTS activity_config (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+        );
     ''')
+    
+    # 初始化活动配置
+    conn.execute('''
+        INSERT OR IGNORE INTO activity_config (key, value) VALUES
+        ('name', '行稳致远共奋进'),
+        ('date', '2026年5月22日'),
+        ('location', '金钟湖公园'),
+        ('distance', '5KM'),
+        ('description', '中山联通2026年金钟湖健步行')
+    ''')
+    
+    # 迁移旧 users 表：新增定位字段
+    try:
+        conn.execute('ALTER TABLE users ADD COLUMN start_lat REAL')
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute('ALTER TABLE users ADD COLUMN start_lng REAL')
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute('ALTER TABLE users ADD COLUMN end_lat REAL')
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute('ALTER TABLE users ADD COLUMN end_lng REAL')
+    except sqlite3.OperationalError:
+        pass
+    
     conn.commit()
     conn.close()
 
@@ -100,6 +139,28 @@ def delete_team(team_id):
     conn.commit()
     conn.close()
     return True, '删除成功'
+
+
+# ---------- 活动配置管理 ----------
+
+def get_activity_config():
+    """获取活动配置"""
+    conn = get_db()
+    rows = conn.execute('SELECT key, value FROM activity_config').fetchall()
+    conn.close()
+    return {row['key']: row['value'] for row in rows}
+
+
+def update_activity_config(key, value):
+    """更新活动配置项"""
+    conn = get_db()
+    conn.execute(
+        'INSERT OR REPLACE INTO activity_config (key, value, updated_at) VALUES (?, ?, datetime("now", "localtime"))',
+        (key, value)
+    )
+    conn.commit()
+    conn.close()
+    return True
 
 
 def get_teams_with_counts():
@@ -170,7 +231,7 @@ def get_user_by_id(user_id):
     return None
 
 
-def checkin_start(bib_number):
+def checkin_start(bib_number, lat=None, lng=None):
     """起点打卡，返回 (success, message, user_data)"""
     user = get_user_by_bib(bib_number)
     if not user:
@@ -180,14 +241,21 @@ def checkin_start(bib_number):
 
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn = get_db()
-    conn.execute('UPDATE users SET start_time = ? WHERE bib_number = ?', (now, bib_number))
+    if lat is not None and lng is not None:
+        conn.execute('UPDATE users SET start_time = ?, start_lat = ?, start_lng = ? WHERE bib_number = ?', 
+                     (now, lat, lng, bib_number))
+    else:
+        conn.execute('UPDATE users SET start_time = ? WHERE bib_number = ?', (now, bib_number))
     conn.commit()
     conn.close()
     user['start_time'] = now
+    if lat and lng:
+        user['start_lat'] = lat
+        user['start_lng'] = lng
     return True, '起点打卡成功！祝您健步愉快！', user
 
 
-def checkin_end(bib_number):
+def checkin_end(bib_number, lat=None, lng=None):
     """终点打卡，返回 (success, message, user_data)"""
     user = get_user_by_bib(bib_number)
     if not user:
@@ -203,15 +271,24 @@ def checkin_end(bib_number):
     duration = int((end_dt - start_dt).total_seconds())
 
     conn = get_db()
-    conn.execute(
-        'UPDATE users SET end_time = ?, duration = ? WHERE bib_number = ?',
-        (now, duration, bib_number)
-    )
+    if lat is not None and lng is not None:
+        conn.execute(
+            'UPDATE users SET end_time = ?, duration = ?, end_lat = ?, end_lng = ? WHERE bib_number = ?',
+            (now, duration, lat, lng, bib_number)
+        )
+    else:
+        conn.execute(
+            'UPDATE users SET end_time = ?, duration = ? WHERE bib_number = ?',
+            (now, duration, bib_number)
+        )
     conn.commit()
     conn.close()
 
     user['end_time'] = now
     user['duration'] = duration
+    if lat and lng:
+        user['end_lat'] = lat
+        user['end_lng'] = lng
     return True, '终点打卡成功！恭喜完成健步行！', user
 
 

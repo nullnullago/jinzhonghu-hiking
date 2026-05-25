@@ -38,6 +38,7 @@
         <button class="admin-tab" data-tab="users">用户管理</button>
         <button class="admin-tab" data-tab="teams">队伍管理</button>
         <button class="admin-tab" data-tab="qrcode">二维码</button>
+        <button class="admin-tab" data-tab="settings">活动设置</button>
         <button class="admin-tab" data-tab="export">数据导出</button>
     </div>
 
@@ -257,6 +258,40 @@
                     <button class="btn btn-primary" id="teamSubmitBtn">保存</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 活动设置 -->
+    <div class="admin-tab-content" id="tab-settings">
+        <div class="settings-section">
+            <h3>活动信息设置</h3>
+            <p>修改活动基本信息，前台页面将实时更新。</p>
+            <form id="settingsForm" class="settings-form">
+                <div class="form-group">
+                    <label>活动名称</label>
+                    <input type="text" id="settingName" placeholder="行稳致远共奋进" required>
+                </div>
+                <div class="form-group">
+                    <label>活动日期</label>
+                    <input type="text" id="settingDate" placeholder="2026年5月22日">
+                </div>
+                <div class="form-group">
+                    <label>活动地点</label>
+                    <input type="text" id="settingLocation" placeholder="金钟湖公园">
+                </div>
+                <div class="form-group">
+                    <label>健行里程</label>
+                    <input type="text" id="settingDistance" placeholder="5KM">
+                </div>
+                <div class="form-group">
+                    <label>活动简介</label>
+                    <textarea id="settingDescription" rows="3" placeholder="中山联通2026年金钟湖健步行"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" id="settingsSaveBtn">
+                    <i class="fas fa-save"></i> 保存设置
+                </button>
+            </form>
+            <div id="settingsMsg" class="settings-msg" style="display:none;"></div>
         </div>
     </div>
 

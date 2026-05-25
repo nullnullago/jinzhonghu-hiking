@@ -127,6 +127,50 @@
   // ========== 打卡 ==========
   const checkinBtn = $('#checkinBtn');
   if (checkinBtn) {
+    // GPS 定位
+    let gpsLocation = null;
+
+    function updateGpsStatus(status, text) {
+      const el = $('#gpsStatus');
+      if (el) {
+        el.className = 'gps-status ' + status;
+        $('#gpsText').textContent = text;
+      }
+    }
+
+    function getLocation() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          updateGpsStatus('gps-error', '设备不支持定位');
+          resolve(null);
+          return;
+        }
+        updateGpsStatus('gps-pending', '正在获取定位...');
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            gpsLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            updateGpsStatus('gps-success', `定位成功 (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`);
+            resolve(gpsLocation);
+          },
+          (err) => {
+            updateGpsStatus('gps-error', '定位失败，将跳过位置记录');
+            resolve(null);
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+        );
+        // 超时兜底
+        setTimeout(() => {
+          if (!gpsLocation && $('#gpsStatus')?.className.includes('gps-pending')) {
+            updateGpsStatus('gps-error', '定位超时，将跳过位置记录');
+            resolve(null);
+          }
+        }, 9000);
+      });
+    }
+
+    // 页面加载时自动获取定位
+    getLocation();
+
     checkinBtn.addEventListener('click', async () => {
       const bib = $('#checkinBib').value.trim().toUpperCase();
       if (!bib) { showToast('请输入参赛编号', 'error'); return; }
@@ -137,7 +181,13 @@
       checkinBtn.innerHTML = '打卡中...';
 
       const endpoint = type === 'start' ? '/api/checkin/start' : '/api/checkin/end';
-      const result = await api(endpoint, { method: 'POST', body: { bib_number: bib } });
+      const body = { bib_number: bib };
+      if (gpsLocation) {
+        body.lat = gpsLocation.lat;
+        body.lng = gpsLocation.lng;
+      }
+
+      const result = await api(endpoint, { method: 'POST', body });
 
       const resultDiv = $('#checkinResult');
       resultDiv.style.display = 'block';
@@ -390,6 +440,64 @@
     $('#exportBtn')?.addEventListener('click', () => {
       window.location.href = '/api/admin/export?password=zhongshan2026';
     });
+
+    // 活动设置
+    const settingsForm = $('#settingsForm');
+    if (settingsForm) {
+      // 加载当前设置
+      fetch('/api/admin/settings?password=zhongshan2026')
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            const c = data.config;
+            $('#settingName').value = c.name || '';
+            $('#settingDate').value = c.date || '';
+            $('#settingLocation').value = c.location || '';
+            $('#settingDistance').value = c.distance || '';
+            $('#settingDescription').value = c.description || '';
+          }
+        })
+        .catch(err => console.error('加载设置失败:', err));
+
+      settingsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = $('#settingsSaveBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+
+        const data = {
+          name: $('#settingName').value.trim(),
+          date: $('#settingDate').value.trim(),
+          location: $('#settingLocation').value.trim(),
+          distance: $('#settingDistance').value.trim(),
+          description: $('#settingDescription').value.trim(),
+        };
+
+        try {
+          const res = await fetch('/api/admin/settings?password=zhongshan2026', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
+          const result = await res.json();
+          const msg = $('#settingsMsg');
+          msg.textContent = result.message || (result.success ? '设置保存成功' : '保存失败');
+          msg.className = result.success ? 'settings-msg success' : 'settings-msg error';
+          msg.style.display = 'block';
+          setTimeout(() => msg.style.display = 'none', 3000);
+        } catch (err) {
+          console.error('保存设置失败:', err);
+          const msg = $('#settingsMsg');
+          msg.textContent = '网络错误，请重试';
+          msg.className = 'settings-msg error';
+          msg.style.display = 'block';
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      });
+    }
 
     // ========== 批量导入 ==========
     const importModal = $('#importModal');

@@ -667,6 +667,43 @@ body::before {
     font-variant-numeric: tabular-nums;
 }
 
+/* GPS 定位状态 */
+.gps-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.gps-pending {
+    background: rgba(213, 0, 28, 0.08);
+    color: var(--unicom-red);
+    border: 1px solid rgba(213, 0, 28, 0.2);
+    animation: pulse-gps 1.5s infinite;
+}
+
+@keyframes pulse-gps {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.gps-success {
+    background: #F0FFF4;
+    color: #00C853;
+    border: 1px solid #00C853;
+}
+
+.gps-error {
+    background: #FFF5F5;
+    color: #999;
+    border: 1px solid #eee;
+}
+
 /* ========== 结果卡片 ========== */
 .result-card {
     margin-top: 24px;
@@ -1173,6 +1210,43 @@ body::before {
 .qrcode-info li { margin-bottom: 4px; color: var(--text-secondary); }
 
 /* 数据导出 */
+/* ========== 活动设置 ========== */
+.settings-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px 20px;
+}
+
+.settings-section h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 8px; }
+.settings-section > p { color: var(--text-secondary); margin-bottom: 24px; font-size: 0.9rem; }
+
+.settings-form .form-group { margin-bottom: 18px; }
+.settings-form textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    resize: vertical;
+    font-family: inherit;
+}
+.settings-form textarea:focus {
+    border-color: var(--unicom-red);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(213, 0, 28, 0.1);
+}
+
+.settings-msg {
+    margin-top: 16px;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+}
+.settings-msg.success { background: #F0FFF4; color: #00C853; border: 1px solid #00C853; }
+.settings-msg.error { background: #FFF5F5; color: var(--unicom-red); border: 1px solid var(--unicom-red); }
+
+/* ========== 数据导出 ========== */
 .export-section {
     background: var(--card-bg);
     border: 1px solid var(--border);

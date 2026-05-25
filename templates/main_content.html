@@ -12,12 +12,6 @@
             <a href="/register" class="nav-link {% if page == 'register' %}active{% endif %}">
                 <i class="fas fa-user-plus"></i> 报名
             </a>
-            <a href="/checkin/start" class="nav-link {% if page == 'checkin' and checkin_type == 'start' %}active{% endif %}">
-                <i class="fas fa-flag"></i> 起点
-            </a>
-            <a href="/checkin/end" class="nav-link {% if page == 'checkin' and checkin_type == 'end' %}active{% endif %}">
-                <i class="fas fa-flag-checkered"></i> 终点
-            </a>
             <a href="/query" class="nav-link {% if page == 'query' %}active{% endif %}">
                 <i class="fas fa-search"></i> 查询
             </a>
@@ -57,7 +51,7 @@
             </div>
             <div class="info-card">
                 <span class="info-icon">🏁</span>
-                <span class="info-value">5 KM</span>
+                <span class="info-value">{{ activity.distance }}</span>
                 <span class="info-label">健行里程</span>
             </div>
         </div>
@@ -130,13 +124,16 @@
 <section class="page-section">
     <div class="page-header">
         <h1>{% if checkin_type == 'start' %}<i class="fas fa-flag"></i> 起点打卡{% else %}<i class="fas fa-flag-checkered"></i> 终点打卡{% endif %}</h1>
-        <p>请输入您的参赛编号完成打卡</p>
+        <p>请扫描二维码进入本页面，输入参赛编号完成打卡</p>
     </div>
     <div class="checkin-card">
         <div class="checkin-type-badge {% if checkin_type == 'start' %}badge-start{% else %}badge-end{% endif %}">
             {% if checkin_type == 'start' %}起点{% else %}终点{% endif %}
         </div>
         <div class="checkin-clock" id="checkinClock">--:--:--</div>
+        <div id="gpsStatus" class="gps-status gps-pending">
+            <i class="fas fa-satellite"></i> <span id="gpsText">正在获取定位...</span>
+        </div>
         <div class="form-group">
             <input type="text" id="checkinBib" placeholder="请输入参赛编号（如 ZSLT0523001）" class="input-lg text-center" maxlength="12">
         </div>
