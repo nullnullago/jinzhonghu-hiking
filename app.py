@@ -53,8 +53,8 @@ def inject_config():
     }
     return {
         'activity': activity_config,
-        'teams': cfg.config['teams'],
-        'team_map': {t['id']: t for t in cfg.config['teams']},
+        'teams': get_all_teams(),
+        'team_map': {t['id']: t for t in get_all_teams()},
     }
 
 
@@ -153,7 +153,7 @@ def api_config():
     return jsonify({
         'success': True,
         'activity': activity_config,
-        'teams': cfg.config['teams'],
+        'teams': get_all_teams(),
     })
 
 
@@ -176,12 +176,13 @@ def api_register():
         return jsonify({'success': False, 'message': '请输入姓名'}), 400
     if not phone or len(phone) != 11 or not phone.isdigit():
         return jsonify({'success': False, 'message': '请输入正确的11位手机号'}), 400
-    if not team_id or team_id not in [t['id'] for t in cfg.config['teams']]:
+    teams_list = get_all_teams()
+    if not team_id or team_id not in [t['id'] for t in teams_list]:
         return jsonify({'success': False, 'message': '请选择参赛队伍'}), 400
 
     try:
         bib_number = register_user(name, phone, team_id)
-        team = cfg.config['teams'][team_id - 1]
+        team = next(t for t in teams_list if t['id'] == team_id)
         return jsonify({
             'success': True,
             'message': '报名成功！',
