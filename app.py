@@ -14,7 +14,7 @@ from flask import (
 import config as cfg
 from database import (
     init_db, get_all_teams, get_teams_with_counts,
-    register_user, get_user_by_bib, get_user_by_id,
+    register_user, get_user_by_bib, get_user_by_id, get_user_by_phone,
     checkin_start, checkin_end, get_rankings, get_stats,
     get_all_users, export_csv, batch_import_users,
     add_team, update_team, delete_team,
@@ -192,6 +192,8 @@ def api_register():
                 'team_emoji': team['emoji'],
             }
         })
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
     except Exception as e:
         return jsonify({'success': False, 'message': f'报名失败：{str(e)}'}), 500
 
@@ -209,13 +211,15 @@ def api_user(identifier):
 def api_checkin_start():
     """起点打卡（支持GPS定位）"""
     data = request.get_json() or {}
-    bib_number = (data.get('bib_number') or '').strip().upper()
-    if not bib_number:
-        return jsonify({'success': False, 'message': '请输入参赛编号'}), 400
+    phone = (data.get('phone') or '').strip()
+    if not phone:
+        return jsonify({'success': False, 'message': '请输入手机号'}), 400
+    if len(phone) != 11 or not phone.isdigit():
+        return jsonify({'success': False, 'message': '请输入正确的11位手机号'}), 400
 
     lat = data.get('lat')
     lng = data.get('lng')
-    ok, msg, user = checkin_start(bib_number, lat, lng)
+    ok, msg, user = checkin_start(phone, lat, lng)
     return jsonify({'success': ok, 'message': msg, 'user': user})
 
 
@@ -223,13 +227,15 @@ def api_checkin_start():
 def api_checkin_end():
     """终点打卡（支持GPS定位）"""
     data = request.get_json() or {}
-    bib_number = (data.get('bib_number') or '').strip().upper()
-    if not bib_number:
-        return jsonify({'success': False, 'message': '请输入参赛编号'}), 400
+    phone = (data.get('phone') or '').strip()
+    if not phone:
+        return jsonify({'success': False, 'message': '请输入手机号'}), 400
+    if len(phone) != 11 or not phone.isdigit():
+        return jsonify({'success': False, 'message': '请输入正确的11位手机号'}), 400
 
     lat = data.get('lat')
     lng = data.get('lng')
-    ok, msg, user = checkin_end(bib_number, lat, lng)
+    ok, msg, user = checkin_end(phone, lat, lng)
     return jsonify({'success': ok, 'message': msg, 'user': user})
 
 

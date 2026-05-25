@@ -178,6 +178,12 @@ def get_teams_with_counts():
 
 def register_user(name, phone, team_id):
     conn = get_db()
+    # 检查手机号是否已存在
+    existing = conn.execute('SELECT id FROM users WHERE phone = ?', (phone,)).fetchone()
+    if existing:
+        conn.close()
+        raise ValueError('该手机号已报名，请勿重复报名')
+
     # 生成参赛编号: ZSLT + 年月日 + 3位序号
     date_str = datetime.now().strftime('%m%d')
     count = conn.execute(
@@ -212,6 +218,23 @@ def get_user_by_bib(bib_number):
         return d
     return None
 
+def get_user_by_phone(phone):
+    conn = get_db()
+    row = conn.execute(
+        'SELECT u.*, t.name AS team_name, t.emoji AS team_emoji, t.color AS team_color '
+        'FROM users u JOIN teams t ON u.team_id = t.id '
+        'WHERE u.phone = ?', (phone,)
+    ).fetchone()
+    conn.close()
+    if row:
+        d = dict(row)
+        if d.get('start_time'):
+            d['start_time'] = d['start_time'].replace('T', ' ')
+        if d.get('end_time'):
+            d['end_time'] = d['end_time'].replace('T', ' ')
+        return d
+    return None
+
 
 def get_user_by_id(user_id):
     conn = get_db()
@@ -231,21 +254,21 @@ def get_user_by_id(user_id):
     return None
 
 
-def checkin_start(bib_number, lat=None, lng=None):
-    """起点打卡，返回 (success, message, user_data)"""
-    user = get_user_by_bib(bib_number)
+def checkin_start(phone, lat=None, lng=None):
+    """起点打卡，通过手机号，返回 (success, message, user_data)"""
+    user = get_user_by_phone(phone)
     if not user:
-        return False, '参赛编号不存在，请确认后重试', None
+        return False, '该手机号未报名，请确认后重试', None
     if user['start_time']:
         return False, f'您已于 {user["start_time"]} 完成起点打卡，无需重复打卡', None
 
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn = get_db()
     if lat is not None and lng is not None:
-        conn.execute('UPDATE users SET start_time = ?, start_lat = ?, start_lng = ? WHERE bib_number = ?', 
-                     (now, lat, lng, bib_number))
+        conn.execute('UPDATE users SET start_time = ?, start_lat = ?, start_lng = ? WHERE phone = ?', 
+                     (now, lat, lng, phone))
     else:
-        conn.execute('UPDATE users SET start_time = ? WHERE bib_number = ?', (now, bib_number))
+        conn.execute('UPDATE users SET start_time = ? WHERE phone = ?', (now, phone))
     conn.commit()
     conn.close()
     user['start_time'] = now
@@ -255,11 +278,11 @@ def checkin_start(bib_number, lat=None, lng=None):
     return True, '起点打卡成功！祝您健步愉快！', user
 
 
-def checkin_end(bib_number, lat=None, lng=None):
-    """终点打卡，返回 (success, message, user_data)"""
-    user = get_user_by_bib(bib_number)
+def checkin_end(phone, lat=None, lng=None):
+    """终点打卡，通过手机号，返回 (success, message, user_data)"""
+    user = get_user_by_phone(phone)
     if not user:
-        return False, '参赛编号不存在，请确认后重试', None
+        return False, '该手机号未报名，请确认后重试', None
     if not user['start_time']:
         return False, '请先在起点完成打卡', None
     if user['end_time']:
@@ -273,13 +296,13 @@ def checkin_end(bib_number, lat=None, lng=None):
     conn = get_db()
     if lat is not None and lng is not None:
         conn.execute(
-            'UPDATE users SET end_time = ?, duration = ?, end_lat = ?, end_lng = ? WHERE bib_number = ?',
-            (now, duration, lat, lng, bib_number)
+            'UPDATE users SET end_time = ?, duration = ?, end_lat = ?, end_lng = ? WHERE phone = ?',
+            (now, duration, lat, lng, phone)
         )
     else:
         conn.execute(
-            'UPDATE users SET end_time = ?, duration = ? WHERE bib_number = ?',
-            (now, duration, bib_number)
+            'UPDATE users SET end_time = ?, duration = ? WHERE phone = ?',
+            (now, duration, phone)
         )
     conn.commit()
     conn.close()

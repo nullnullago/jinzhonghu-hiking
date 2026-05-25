@@ -172,8 +172,12 @@
     getLocation();
 
     checkinBtn.addEventListener('click', async () => {
-      const bib = $('#checkinBib').value.trim().toUpperCase();
-      if (!bib) { showToast('请输入参赛编号', 'error'); return; }
+      const phone = $('#checkinPhone').value.trim();
+      if (!phone) { showToast('请输入手机号', 'error'); return; }
+      if (phone.length !== 11 || !/^\d+$/.test(phone)) {
+        showToast('请输入正确的11位手机号', 'error');
+        return;
+      }
 
       const type = checkinBtn.dataset.type;
       const btnText = checkinBtn.innerHTML;
@@ -181,7 +185,7 @@
       checkinBtn.innerHTML = '打卡中...';
 
       const endpoint = type === 'start' ? '/api/checkin/start' : '/api/checkin/end';
-      const body = { bib_number: bib };
+      const body = { phone: phone };
       if (gpsLocation) {
         body.lat = gpsLocation.lat;
         body.lng = gpsLocation.lng;
